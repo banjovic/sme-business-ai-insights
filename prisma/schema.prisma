@@ -1,0 +1,92 @@
+// Prisma schema implementing the conceptual ERD from Chapter 3 (Figure 3.4).
+// SQLite is used for local development/demo simplicity; the design maps
+// directly onto PostgreSQL (see Chapter 4, Table 4.1) for production use —
+// only the `provider` and `url` below would need to change.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String            @id @default(cuid())
+  email        String            @unique
+  passwordHash String
+  createdAt    DateTime          @default(now())
+  business     Business?
+  conversation ConversationLog[]
+}
+
+model Business {
+  id         String          @id @default(cuid())
+  name       String
+  sector     String
+  location   String
+  user       User            @relation(fields: [userId], references: [id])
+  userId     String          @unique
+  stockItems StockItem[]
+  sales      SaleRecord[]
+  expenses   ExpenseRecord[]
+  insights   Insight[]
+  createdAt  DateTime        @default(now())
+}
+
+model StockItem {
+  id             String       @id @default(cuid())
+  business       Business     @relation(fields: [businessId], references: [id])
+  businessId     String
+  name           String
+  quantityOnHand Int          @default(0)
+  reorderPoint   Int          @default(5)
+  unitPrice      Float        @default(0)
+  sales          SaleRecord[]
+  createdAt      DateTime     @default(now())
+}
+
+model SaleRecord {
+  id           String    @id @default(cuid())
+  business     Business  @relation(fields: [businessId], references: [id])
+  businessId   String
+  item         StockItem @relation(fields: [itemId], references: [id])
+  itemId       String
+  quantitySold Int
+  amount       Float
+  date         DateTime
+  createdAt    DateTime  @default(now())
+}
+
+model ExpenseRecord {
+  id         String   @id @default(cuid())
+  business   Business @relation(fields: [businessId], references: [id])
+  businessId String
+  category   String
+  amount     Float
+  date       DateTime
+  createdAt  DateTime @default(now())
+}
+
+model Insight {
+  id          String   @id @default(cuid())
+  business    Business @relation(fields: [businessId], references: [id])
+  businessId  String
+  type        String   // "stockout" | "slow_period" | "anomaly" | "summary"
+  severity    String   // "info" | "warning" | "critical"
+  message     String
+  meta        String?  // JSON-encoded extra detail (item name, dates, etc.)
+  generatedAt DateTime @default(now())
+}
+
+model ConversationLog {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  question  String
+  answer    String
+  intent    String?
+  timestamp DateTime @default(now())
+}
