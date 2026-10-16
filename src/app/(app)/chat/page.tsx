@@ -7,8 +7,11 @@ import { useGetChatHistoryQuery, useAskQuestionMutation } from "@/store/api";
 
 const SUGGESTIONS = [
   "Which items are about to run out?",
+  "How much revenue did we make this past week?",
+  "Which product is our top seller?",
   "Has anything been slow this week?",
-  "Any unusual spending lately?",
+  "Any unusual spending or big expenses lately?",
+  "Give me advice on what to restock first",
 ];
 
 export default function ChatPage() {

@@ -20,41 +20,29 @@ spending flags — plus a conversational query interface.
   intent-classifier standing in for the LLM function-calling design
   described in Chapter 3, Section 3.6.4 (see that file for how to swap in
   a real LLM API).
-- **Database:** SQLite locally (`prisma/schema.prisma` defines the schema,
-  matching the ERD in Chapter 3, Figure 3.4); swaps to PostgreSQL for
-  production by changing one line, per Chapter 4, Table 4.1.
+- **Database:** PostgreSQL via Prisma (`prisma/schema.prisma` defines the schema).
 - **Auth:** a small hand-rolled signed-cookie session (`src/lib/auth.ts`),
   standing in for the NextAuth.js/Auth.js approach specified in Chapter 4.
 
-## ⚠️ About the database layer in this build
+## Database setup
 
-`prisma/schema.prisma` is the authoritative data model. On a normal machine
-with internet access, you'd use the real, generated Prisma Client. This
-project was assembled in a sandboxed environment that blocks the domain
-Prisma's CLI downloads its engine binaries from, so `prisma generate`
-couldn't run there. To keep the app genuinely testable, `src/lib/prisma.ts`
-currently re-exports a hand-written shim (`src/lib/db-shim.ts`) that
-implements the exact Prisma Client calls used elsewhere in the app, backed
-directly by `better-sqlite3`. Every route and AI module is written against
-the normal Prisma Client API and has no idea the shim exists.
+The app uses the generated Prisma Client with PostgreSQL, including Supabase.
+Set `DATABASE_URL` in `.env` to your PostgreSQL connection string. The public
+Supabase URL and publishable key alone do not connect Prisma to the database.
+For a Supabase transaction pooler, use the connection parameters recommended
+in your project's connection settings.
 
-**On your own machine, switch to the real Prisma Client:**
-
-```bash
-npm install @prisma/adapter-better-sqlite3
-npx prisma generate
-npx prisma db push
-```
-
-Then replace the single export line in `src/lib/prisma.ts` with the
-real-Prisma-Client version documented in that file's comments. No other
-file needs to change.
+`npm install` generates the client automatically. After changing the schema,
+run `npm run db:generate`. For a new database, run `npm run db:push` to create
+the application tables; review schema changes before applying to existing data.
+The optional demo seed adds data only if its demo email does not already exist.
 
 ## Getting started
 
 ```bash
 npm install
-npm run db:seed     # creates prisma/dev.db with a demo account + 5 weeks of data
+npm run db:push     # creates the application tables in the configured database
+npm run db:seed     # optional demo account + 5 weeks of data
 npm run dev          # http://localhost:3000
 ```
 
@@ -83,7 +71,7 @@ src/
                                    expenses, insights, chat)
   lib/
     ai/                         — the four AI/ML modules (Chapter 3, 3.6.3–3.6.4)
-    auth.ts, currentBusiness.ts, prisma.ts, db-shim.ts, utils.ts
+    auth.ts, currentBusiness.ts, prisma.ts, utils.ts
   components/ui/                — hand-built shadcn/ui-style components
   store/                        — Redux store + RTK Query API slice
 prisma/
@@ -96,7 +84,7 @@ prisma/
 | Area | Chapter 4 design | This build |
 |---|---|---|
 | Auth | NextAuth.js/Auth.js | Hand-rolled signed-cookie session |
-| Database | PostgreSQL via Prisma | SQLite via a Prisma-call-compatible shim (see above) |
+| Database | PostgreSQL via Prisma | PostgreSQL via Prisma |
 | AI/ML layer | Separate Python/FastAPI microservice | In-process TypeScript (same algorithms, no cross-service hop) |
 | Conversational layer | LLM API via function-calling | Rule-based intent classifier over the same fixed intent set |
 
