@@ -1,25 +1,115 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { useSignIn, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ChevronDown, ChevronUp, Store } from "lucide-react";
+
+const SHOWCASE_ACCOUNTS = [
+  { name: "Default Demo Account", email: "demo@adaezestores.ng", sector: "Retail Provisions", location: "Lagos" },
+  { name: "Adaeze Stores", email: "adaeze@adaezestores.ng", sector: "Retail Provisions", location: "Lagos" },
+  { name: "Chidi Tech & Gadgets", email: "chidi@chidicorner.ng", sector: "Electronics & Repairs", location: "Ikeja, Lagos" },
+  { name: "Kano Fine Textiles", email: "aminu@kanotextiles.ng", sector: "Fabrics & Attire", location: "Kano" },
+  { name: "Ifeoma Bakes & Pastries", email: "ifeoma@ifeomabakes.ng", sector: "Bakery & Food", location: "Enugu" },
+  { name: "Danladi Agro Supplies", email: "danladi@danladiagro.ng", sector: "Grains & Produce", location: "Jos" },
+  { name: "Boluwatife Fashion House", email: "bolu@bolufashion.ng", sector: "Boutique & Tailoring", location: "Ibadan" },
+  { name: "Deji Auto Spare Parts", email: "deji@dejiauto.ng", sector: "Automotive Spares", location: "Ladipo, Lagos" },
+  { name: "Grace Essential Pharmacy", email: "grace@gracepharm.ng", sector: "Pharmaceuticals", location: "Abuja" },
+  { name: "Nnamdi Building Materials", email: "nnamdi@nnamdimaterials.ng", sector: "Building & Hardware", location: "Onitsha" },
+  { name: "Amina Natural Cosmetics", email: "amina@aminacosmetics.ng", sector: "Beauty & Salon", location: "Kaduna" },
+  { name: "Barakat Cold Room & Foods", email: "barakat@barakatfoods.ng", sector: "Frozen Foods", location: "Port Harcourt" },
+  { name: "Abeokuta Heritage Pottery", email: "segun@abeokutacrafts.ng", sector: "Crafts & Decor", location: "Abeokuta" },
+];
 
 export default function LoginPage() {
   const router = useRouter();
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isSignedIn } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showAccounts, setShowAccounts] = useState(false);
+
+  // Automatically route to dashboard if already authenticated
+  useEffect(() => {
+    if (isSignedIn) {
+      router.replace("/dashboard");
+    }
+  }, [isSignedIn, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
     try {
+      // 1. First attempt instant ticket sign-in for showcase accounts (bypasses second-factor email OTP)
+      if (isLoaded && signIn) {
+        try {
+          const ticketRes = await fetch("/api/auth/demo-ticket", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (ticketRes.ok) {
+            const { ticket } = await ticketRes.json();
+            if (ticket) {
+              const ticketResult = await signIn.create({
+                strategy: "ticket",
+                ticket,
+              });
+
+              if (ticketResult.status === "complete") {
+                await setActive({ session: ticketResult.createdSessionId });
+                router.push("/dashboard");
+                router.refresh();
+                return;
+              }
+            }
+          }
+        } catch {
+          // Fall through to regular sign-in
+        }
+      }
+
+      // 2. Regular Clerk sign in for registered users
+      if (isLoaded && signIn) {
+        try {
+          const result = await signIn.create({
+            identifier: email,
+            password: password,
+          });
+
+          if (result.status === "complete") {
+            await setActive({ session: result.createdSessionId });
+            router.push("/dashboard");
+            router.refresh();
+            return;
+          } else {
+            setError(`Sign in requires additional step: ${result.status}`);
+            return;
+          }
+        } catch (err: any) {
+          const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || "Incorrect email or password";
+          if (msg.toLowerCase().includes("already signed in")) {
+            router.push("/dashboard");
+            router.refresh();
+            return;
+          }
+          setError(msg);
+          return;
+        }
+      }
+
+      // 3. Fallback to local session
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -27,14 +117,21 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
+        setError(data.error ?? "Incorrect email or password");
         return;
       }
       router.push("/dashboard");
       router.refresh();
+    } catch {
+      setError("Something went wrong");
     } finally {
       setLoading(false);
     }
+  }
+
+  function fillAccount(accEmail: string) {
+    setEmail(accEmail);
+    setPassword("Showcase2026!");
   }
 
   return (
@@ -52,11 +149,25 @@ export default function LoginPage() {
         <form onSubmit={onSubmit} className="mt-8 space-y-5">
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@business.com" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@business.com"
+            />
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            <Input
+              id="password"
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
           </div>
 
           {error && (
@@ -75,11 +186,46 @@ export default function LoginPage() {
           <Link href="/register" className="font-medium text-navy underline underline-offset-2">Set up your business</Link>
         </p>
 
-        <div className="mt-10 rounded-md border border-line bg-surface p-4 text-xs text-body">
+        <div className="mt-8 rounded-md border border-line bg-surface p-4 text-xs text-body">
           <p className="font-medium text-ink">Trying the demo?</p>
           <p className="mt-1">
-            Email: <span className="tabular">demo@adaezestores.ng</span> · Password: <span className="tabular">demo1234</span>
+            Email: <span className="tabular font-mono text-ink">demo@adaezestores.ng</span> · Password: <span className="tabular font-mono text-ink">Showcase2026!</span>
           </p>
+
+          <div className="mt-3 border-t border-line/60 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowAccounts(!showAccounts)}
+              className="flex w-full items-center justify-between font-medium text-navy hover:underline"
+            >
+              <span className="flex items-center gap-1.5">
+                <Store size={14} className="text-gold-dark" />
+                All 12 Showcase SME Accounts ({showAccounts ? "Hide" : "Select"})
+              </span>
+              {showAccounts ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+
+            {showAccounts && (
+              <div className="mt-2 divide-y divide-line/60 max-h-56 overflow-y-auto space-y-1">
+                <p className="pb-1 text-[11px] text-body/80">Click any business below to auto-fill its login credentials:</p>
+                {SHOWCASE_ACCOUNTS.map((acc) => (
+                  <div
+                    key={acc.email}
+                    onClick={() => fillAccount(acc.email)}
+                    className="pt-1.5 pb-1 flex justify-between items-center cursor-pointer hover:bg-canvas p-1 rounded transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-ink">{acc.name}</p>
+                      <p className="text-[11px] text-body">{acc.sector} · {acc.location}</p>
+                    </div>
+                    <span className="font-mono text-[10px] text-navy bg-navy/5 px-1.5 py-0.5 rounded">
+                      Use this
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>
