@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useGetChatHistoryQuery, useAskQuestionMutation } from "@/store/api";
+import ReactMarkdown from "react-markdown";
 
 const SUGGESTIONS = [
   "How business now?",
@@ -73,8 +74,23 @@ export default function ChatPage() {
                 </div>
               </div>
               <div className="flex justify-start">
-                <div className="max-w-[85%] whitespace-pre-wrap rounded-lg rounded-bl-sm border border-line bg-surface px-3.5 py-2.5 text-[14px] leading-relaxed text-ink shadow-sm lg:max-w-[75%]">
-                  {h.answer}
+                <div className="max-w-[85%] rounded-lg rounded-bl-sm border border-line bg-surface px-4 py-3 text-[14px] leading-relaxed text-ink shadow-sm lg:max-w-[75%]">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="mb-2 list-disc pl-4 space-y-1 last:mb-0">{children}</ul>,
+                      ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 space-y-1 last:mb-0">{children}</ol>,
+                      li: ({ children }) => <li className="leading-snug">{children}</li>,
+                      h1: ({ children }) => <h3 className="mb-1.5 mt-2.5 font-display text-base font-semibold text-ink">{children}</h3>,
+                      h2: ({ children }) => <h4 className="mb-1 mt-2 font-display text-[15px] font-semibold text-ink">{children}</h4>,
+                      h3: ({ children }) => <h5 className="mb-1 mt-1.5 font-display text-sm font-semibold text-ink">{children}</h5>,
+                      hr: () => <hr className="my-2 border-line" />,
+                    }}
+                  >
+                    {h.answer}
+                  </ReactMarkdown>
                 </div>
               </div>
             </motion.div>

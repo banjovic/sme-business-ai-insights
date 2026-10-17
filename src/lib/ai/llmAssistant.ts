@@ -52,9 +52,10 @@ CORE COMMUNICATION RULES:
 
 async function callGemini(apiKey: string, prompt: string, question: string): Promise<string | null> {
   const candidateModels = [
-    process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.8-flash",
     "gemini-flash-latest",
-    "gemini-2.5-flash",
   ];
 
   for (const model of candidateModels) {
@@ -79,7 +80,7 @@ async function callGemini(apiKey: string, prompt: string, question: string): Pro
             maxOutputTokens: 600,
           },
         }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(20000),
       });
 
       if (!res.ok) {
@@ -88,6 +89,7 @@ async function callGemini(apiKey: string, prompt: string, question: string): Pro
         continue; // try next candidate model
       }
 
+      const data = await res.json();
       const parts = data.candidates?.[0]?.content?.parts || [];
       const text = parts.map((p: any) => p.text || "").join("").trim();
       if (text) {
