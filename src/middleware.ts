@@ -2,16 +2,19 @@ import { jwtVerify } from "jose";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { type NextRequest, type NextFetchEvent, NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/login(.*)",
-  "/register(.*)",
-  "/api/auth(.*)",
-]);
-
+// Routes where already-authenticated users should not linger (redirect to /dashboard)
 const isAuthRoute = createRouteMatcher([
   "/login(.*)",
   "/register(.*)",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+]);
+
+// Protected routes that REQUIRE an active login session
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/log(.*)",
+  "/chat(.*)",
 ]);
 
 const clerkHandler = clerkMiddleware((auth, req) => {
@@ -21,18 +24,28 @@ const clerkHandler = clerkMiddleware((auth, req) => {
 
   const { userId } = auth();
 
-  // If user is already logged in and visits login/register, redirect to dashboard
+  // 1. If user is already logged in and visits login or register, redirect to dashboard
   if (userId && isAuthRoute(req)) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  if (!isPublicRoute(req)) {
-    auth().protect();
+  // 2. If trying to access a protected business route without being logged in, redirect to login
+  if (!userId && isProtectedRoute(req)) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("redirect_url", req.url);
+    return NextResponse.redirect(loginUrl);
   }
+
+  // 3. For any other route (including unmatched / 404 paths), let Next.js render not-found.tsx
+  return NextResponse.next();
 });
 
 export default async function middleware(req: NextRequest, event: NextFetchEvent) {
-  const isAuthPage = req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/register");
+  const isAuthPage =
+    req.nextUrl.pathname.startsWith("/login") ||
+    req.nextUrl.pathname.startsWith("/register") ||
+    req.nextUrl.pathname.startsWith("/sign-in") ||
+    req.nextUrl.pathname.startsWith("/sign-up");
 
   // Check legacy cookie session
   const token = req.cookies.get("sme_bi_session")?.value;
@@ -49,11 +62,14 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
         return NextResponse.next();
       }
     } catch {
-      // Invalid local sessions must still pass the configured auth checks.
+      // Invalid local session, proceed to Clerk check
     }
   }
 
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    if (isProtectedRoute(req)) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
     return NextResponse.next();
   }
 
