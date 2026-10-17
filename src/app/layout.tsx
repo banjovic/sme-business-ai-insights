@@ -6,6 +6,7 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "./globals.css";
 
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import { StoreProvider } from "@/store/StoreProvider";
 
@@ -15,24 +16,28 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body className="font-sans">
-        <StoreProvider>
-          <div className="min-h-screen bg-canvas">{children}</div>
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              classNames: {
-                toast: "!bg-surface !border !border-line !shadow-popover !rounded-lg",
-                title: "!text-ink !font-medium",
-                success: "!text-success",
-                error: "!text-alert-red",
-              },
-            }}
-          />
-        </StoreProvider>
-      </body>
-    </html>
+  const content = (
+      <html lang="en" className="font-sans">
+        <body className="font-sans">
+          <StoreProvider>
+            <div className="min-h-screen bg-canvas">{children}</div>
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                classNames: {
+                  toast: "!bg-surface !border !border-line !shadow-popover !rounded-lg",
+                  title: "!text-ink !font-medium",
+                  success: "!text-success",
+                  error: "!text-alert-red",
+                },
+              }}
+            />
+          </StoreProvider>
+        </body>
+      </html>
   );
+
+  return process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+    ? <ClerkProvider>{content}</ClerkProvider>
+    : content;
 }

@@ -3,18 +3,42 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "motion/react";
+import { UserButton, useUser, useClerk } from "@clerk/nextjs";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav-items";
 
-// Desktop-only sidebar. The mobile experience deliberately mirrors banking
-// apps (see bottom-nav.tsx), but a phone-sized column stretched across a
-// desktop viewport serves nobody — this gives wide screens a real app shell.
+function ClerkAccount() {
+  const { isLoaded, isSignedIn, user } = useUser();
+  if (!isLoaded || !isSignedIn) return null;
+  return (
+    <div className="flex items-center gap-2 px-2 py-1">
+      <UserButton afterSignOutUrl="/login" />
+      <p className="truncate text-xs font-medium text-ink">
+        {user.fullName || user.primaryEmailAddress?.emailAddress}
+      </p>
+    </div>
+  );
+}
+
+function ClerkSidebar() {
+  const { signOut } = useClerk();
+  const { isSignedIn } = useUser();
+  return <SidebarContent account={<ClerkAccount />} onSignOut={isSignedIn ? () => signOut() : undefined} />;
+}
+
 export function SidebarNav() {
+  return process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+    ? <ClerkSidebar />
+    : <SidebarContent />;
+}
+
+function SidebarContent({ account, onSignOut }: { account?: React.ReactNode; onSignOut?: () => Promise<unknown> }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  async function logout() {
+  async function handleLogout() {
+    await onSignOut?.();
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
@@ -53,13 +77,17 @@ export function SidebarNav() {
         })}
       </nav>
 
-      <button
-        onClick={logout}
-        className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-body hover:bg-canvas hover:text-ink"
-      >
-        <LogOut size={18} strokeWidth={1.8} />
-        Log out
-      </button>
+      <div className="border-t border-line pt-4 space-y-2">
+        {account}
+
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-body hover:bg-canvas hover:text-ink"
+        >
+          <LogOut size={18} strokeWidth={1.8} />
+          Log out
+        </button>
+      </div>
     </aside>
   );
 }

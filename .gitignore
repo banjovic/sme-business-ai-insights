@@ -5,5 +5,5 @@ dev.db
 dev.db-journal
 dev.db-wal
 dev.db-shm
-.env.local
+.env
 *.log
