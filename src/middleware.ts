@@ -4,17 +4,24 @@ import { type NextRequest, type NextFetchEvent, NextResponse } from "next/server
 
 // Routes where already-authenticated users should not linger (redirect to /dashboard)
 const isAuthRoute = createRouteMatcher([
-  "/login(.*)",
-  "/register(.*)",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
+  "/login",
+  "/login/(.*)",
+  "/register",
+  "/register/(.*)",
+  "/sign-in",
+  "/sign-in/(.*)",
+  "/sign-up",
+  "/sign-up/(.*)",
 ]);
 
 // Protected routes that REQUIRE an active login session
 const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  "/log(.*)",
-  "/chat(.*)",
+  "/dashboard",
+  "/dashboard/(.*)",
+  "/log",
+  "/log/(.*)",
+  "/chat",
+  "/chat/(.*)",
 ]);
 
 const clerkHandler = clerkMiddleware((auth, req) => {
@@ -24,9 +31,14 @@ const clerkHandler = clerkMiddleware((auth, req) => {
 
   const { userId } = auth();
 
-  // 1. If user is already logged in and visits login or register, redirect to dashboard
-  if (userId && isAuthRoute(req)) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+  // 1. If user is on an auth page (login/register):
+  if (isAuthRoute(req)) {
+    // If already logged in, send them to dashboard
+    if (userId) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+    // If not logged in, allow them to view login/register page!
+    return NextResponse.next();
   }
 
   // 2. If trying to access a protected business route without being logged in, redirect to login
@@ -67,6 +79,9 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
   }
 
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    if (isAuthPage) {
+      return NextResponse.next();
+    }
     if (isProtectedRoute(req)) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
