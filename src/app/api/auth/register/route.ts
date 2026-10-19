@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, createSession } from "@/lib/auth";
+import {
+  hashPassword,
+  createSessionToken,
+  SESSION_COOKIE,
+  SESSION_COOKIE_OPTIONS,
+} from "@/lib/auth";
 
 const schema = z.object({
   email: z.string().email(),
@@ -40,6 +45,8 @@ export async function POST(req: Request) {
     },
   });
 
-  await createSession(user.id);
-  return NextResponse.json({ ok: true });
+  const token = await createSessionToken(user.id);
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+  return response;
 }

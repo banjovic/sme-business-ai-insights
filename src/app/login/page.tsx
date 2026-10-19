@@ -53,8 +53,7 @@ function LoginForm() {
         return;
       }
 
-      router.push(redirectUrl);
-      router.refresh();
+      window.location.href = redirectUrl;
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

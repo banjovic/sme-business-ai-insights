@@ -5,6 +5,7 @@ export type SaleDTO = { id: string; itemId: string; itemName: string; quantitySo
 export type ExpenseDTO = { id: string; category: string; amount: number; date: string };
 export type InsightDTO = { id: string; type: string; severity: string; message: string; generatedAt: string };
 export type ChatMessageDTO = { id: string; question: string; answer: string; timestamp: string };
+export type BusinessDTO = { id: string; name: string; sector: string; location: string; email?: string };
 
 // RTK Query's built-in caching and automatic re-fetching (see Chapter 4,
 // Table 4.1) means the dashboard, logging forms, and chat all share one
@@ -13,8 +14,10 @@ export type ChatMessageDTO = { id: string; question: string; answer: string; tim
 export const api = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({ baseUrl: "/api" }),
-  tagTypes: ["StockItems", "Sales", "Expenses", "Insights", "Chat"],
+  tagTypes: ["StockItems", "Sales", "Expenses", "Insights", "Chat", "Business"],
+  refetchOnMountOrArgChange: true,
   endpoints: (builder) => ({
+    getBusiness: builder.query<BusinessDTO, void>({ query: () => "/business", providesTags: ["Business"] }),
     getStockItems: builder.query<StockItemDTO[], void>({ query: () => "/stock", providesTags: ["StockItems"] }),
     getSales: builder.query<SaleDTO[], void>({ query: () => "/sales", providesTags: ["Sales"] }),
     addSale: builder.mutation<SaleDTO, { itemId: string; quantitySold: number; amount: number; date: string }>({
@@ -44,7 +47,15 @@ export const api = createApi({
 });
 
 export const {
-  useGetStockItemsQuery, useGetSalesQuery, useAddSaleMutation, useAddStockItemMutation,
-  useRestockItemMutation, useGetExpensesQuery, useAddExpenseMutation, useGetInsightsQuery,
-  useGetChatHistoryQuery, useAskQuestionMutation,
+  useGetBusinessQuery,
+  useGetStockItemsQuery,
+  useGetSalesQuery,
+  useAddSaleMutation,
+  useAddStockItemMutation,
+  useRestockItemMutation,
+  useGetExpensesQuery,
+  useAddExpenseMutation,
+  useGetInsightsQuery,
+  useGetChatHistoryQuery,
+  useAskQuestionMutation,
 } = api;

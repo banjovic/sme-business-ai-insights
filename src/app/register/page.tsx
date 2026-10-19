@@ -41,8 +41,7 @@ export default function RegisterPage() {
         setError(data.error ?? "Failed to set up account");
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      window.location.href = "/dashboard";
     } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {

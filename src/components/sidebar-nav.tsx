@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { LogOut } from "lucide-react";
+import { LogOut, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav-items";
+import { useGetBusinessQuery } from "@/store/api";
 
 export function SidebarNav() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { data: business } = useGetBusinessQuery();
 
   async function handleLogout() {
     try {
@@ -17,8 +18,8 @@ export function SidebarNav() {
     } catch {
       // ignore
     }
-    router.push("/login");
-    router.refresh();
+    // Hard navigate to clear Redux in-memory cache and cookies cleanly
+    window.location.href = "/login";
   }
 
   return (
@@ -54,7 +55,19 @@ export function SidebarNav() {
         })}
       </nav>
 
-      <div className="border-t border-line pt-4 space-y-2">
+      <div className="border-t border-line pt-4 space-y-3">
+        {business && (
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy/5 text-navy">
+              <Building2 size={16} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-ink">{business.name}</p>
+              <p className="truncate text-[11px] text-body">{business.sector}</p>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-body hover:bg-canvas hover:text-ink transition-colors"

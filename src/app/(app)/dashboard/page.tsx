@@ -18,6 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  useGetBusinessQuery,
   useGetInsightsQuery,
   useGetSalesQuery,
   useGetStockItemsQuery,
@@ -78,6 +79,7 @@ function formatShortDate(dateStr: string) {
 export default function DashboardPage() {
   const router = useRouter();
 
+  const { data: business } = useGetBusinessQuery();
   const { data: insights, isLoading: isInsightsLoading } = useGetInsightsQuery();
   const { data: sales, isLoading: isSalesLoading } = useGetSalesQuery();
   const { data: stockItems, isLoading: isStockLoading } = useGetStockItemsQuery();
@@ -162,8 +164,7 @@ export default function DashboardPage() {
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    window.location.href = "/login";
   }
 
   return (
@@ -172,7 +173,9 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <p className="font-display text-sm text-gold-dark">Good to see you</p>
-          <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">Your Business Today</h1>
+          <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">
+            {business?.name || "Your Business Today"}
+          </h1>
         </div>
         <Dialog>
           <DialogTrigger asChild>

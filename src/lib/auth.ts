@@ -34,6 +34,14 @@ import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "sme_bi_session";
 
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30, // 30 days
+};
+
 export function getSecretKey() {
   return new TextEncoder().encode(
     process.env.SESSION_SECRET || "dev-only-insecure-secret-change-me"
@@ -48,20 +56,17 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string) {
-  const token = await new SignJWT({ userId })
+export async function createSessionToken(userId: string): Promise<string> {
+  return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
     .sign(getSecretKey());
+}
 
-  cookies().set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30, // 30 days
-  });
+export async function createSession(userId: string) {
+  const token = await createSessionToken(userId);
+  cookies().set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
 }
 
 export async function destroySession() {
