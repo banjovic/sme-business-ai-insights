@@ -1,28 +1,36 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, Store } from "lucide-react";
+import { ChevronDown, ChevronUp, Store, Sparkles, Loader2 } from "lucide-react";
 
-const SHOWCASE_ACCOUNTS = [
-  { name: "Default Demo Account", email: "demo@adaezestores.ng", sector: "Retail Provisions", location: "Lagos" },
-  { name: "Adaeze Stores", email: "adaeze@adaezestores.ng", sector: "Retail Provisions", location: "Lagos" },
-  { name: "Chidi Tech & Gadgets", email: "chidi@chidicorner.ng", sector: "Electronics & Repairs", location: "Ikeja, Lagos" },
-  { name: "Kano Fine Textiles", email: "aminu@kanotextiles.ng", sector: "Fabrics & Attire", location: "Kano" },
-  { name: "Ifeoma Bakes & Pastries", email: "ifeoma@ifeomabakes.ng", sector: "Bakery & Food", location: "Enugu" },
-  { name: "Danladi Agro Supplies", email: "danladi@danladiagro.ng", sector: "Grains & Produce", location: "Jos" },
-  { name: "Boluwatife Fashion House", email: "bolu@bolufashion.ng", sector: "Boutique & Tailoring", location: "Ibadan" },
-  { name: "Deji Auto Spare Parts", email: "deji@dejiauto.ng", sector: "Automotive Spares", location: "Ladipo, Lagos" },
-  { name: "Grace Essential Pharmacy", email: "grace@gracepharm.ng", sector: "Pharmaceuticals", location: "Abuja" },
-  { name: "Nnamdi Building Materials", email: "nnamdi@nnamdimaterials.ng", sector: "Building & Hardware", location: "Onitsha" },
-  { name: "Amina Natural Cosmetics", email: "amina@aminacosmetics.ng", sector: "Beauty & Salon", location: "Kaduna" },
-  { name: "Barakat Cold Room & Foods", email: "barakat@barakatfoods.ng", sector: "Frozen Foods", location: "Port Harcourt" },
-  { name: "Abeokuta Heritage Pottery", email: "segun@abeokutacrafts.ng", sector: "Crafts & Decor", location: "Abeokuta" },
+interface ShowcaseAccount {
+  id?: string;
+  name: string;
+  email: string;
+  sector: string;
+  location: string;
+  isDemo: boolean;
+}
+
+const DEFAULT_DEMO_ACCOUNTS: ShowcaseAccount[] = [
+  { name: "Adaeze Stores (Demo)", email: "demo@adaezestores.ng", sector: "Retail Provisions", location: "Lagos", isDemo: true },
+  { name: "Chidi Tech & Gadgets", email: "chidi@chidicorner.ng", sector: "Electronics & Repairs", location: "Ikeja, Lagos", isDemo: true },
+  { name: "Kano Fine Textiles", email: "aminu@kanotextiles.ng", sector: "Fabrics & Attire", location: "Kano", isDemo: true },
+  { name: "Ifeoma Bakes & Pastries", email: "ifeoma@ifeomabakes.ng", sector: "Bakery & Food", location: "Enugu", isDemo: true },
+  { name: "Danladi Agro Supplies", email: "danladi@danladiagro.ng", sector: "Grains & Produce", location: "Jos", isDemo: true },
+  { name: "Boluwatife Fashion House", email: "bolu@bolufashion.ng", sector: "Boutique & Tailoring", location: "Ibadan", isDemo: true },
+  { name: "Deji Auto Spare Parts", email: "deji@dejiauto.ng", sector: "Automotive Spares", location: "Ladipo, Lagos", isDemo: true },
+  { name: "Grace Essential Pharmacy", email: "grace@gracepharm.ng", sector: "Pharmaceuticals", location: "Abuja", isDemo: true },
+  { name: "Nnamdi Building Materials", email: "nnamdi@nnamdimaterials.ng", sector: "Building & Hardware", location: "Onitsha", isDemo: true },
+  { name: "Amina Natural Cosmetics", email: "amina@aminacosmetics.ng", sector: "Beauty & Salon", location: "Kaduna", isDemo: true },
+  { name: "Barakat Cold Room & Foods", email: "barakat@barakatfoods.ng", sector: "Frozen Foods", location: "Port Harcourt", isDemo: true },
+  { name: "Abeokuta Heritage Pottery", email: "segun@abeokutacrafts.ng", sector: "Crafts & Decor", location: "Abeokuta", isDemo: true },
 ];
 
 function LoginForm() {
@@ -30,11 +38,36 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
+  const passwordRef = useRef<HTMLInputElement>(null);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
+
+  const [accounts, setAccounts] = useState<ShowcaseAccount[]>(DEFAULT_DEMO_ACCOUNTS);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadAccounts() {
+      setAccountsLoading(true);
+      try {
+        const res = await fetch("/api/showcase-accounts");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setAccounts(data);
+          }
+        }
+      } catch {
+        // Keep default accounts on error
+      } finally {
+        setAccountsLoading(false);
+      }
+    }
+    loadAccounts();
+  }, []);
 
   async function handleLogin(loginEmail: string, loginPass: string) {
     setError(null);
@@ -66,9 +99,14 @@ function LoginForm() {
     handleLogin(email, password);
   }
 
-  function fillAccount(accEmail: string) {
-    setEmail(accEmail);
-    setPassword("Showcase2026!");
+  function selectAccount(acc: ShowcaseAccount) {
+    setEmail(acc.email);
+    if (acc.isDemo) {
+      setPassword("Showcase2026!");
+    } else {
+      setPassword("");
+      passwordRef.current?.focus();
+    }
   }
 
   return (
@@ -99,6 +137,7 @@ function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              ref={passwordRef}
               type="password"
               required
               value={password}
@@ -113,7 +152,7 @@ function LoginForm() {
             </motion.p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+          <Button type="submit" size="lg" className="w-full" loading={loading}>
             {loading ? "Logging in…" : "Log in"}
           </Button>
         </form>
@@ -137,25 +176,45 @@ function LoginForm() {
             >
               <span className="flex items-center gap-1.5">
                 <Store size={14} className="text-gold-dark" />
-                All 12 Showcase SME Accounts ({showAccounts ? "Hide" : "Select"})
+                All SME Showcase Accounts ({accounts.length}) {showAccounts ? "(Hide)" : "(Select)"}
               </span>
               {showAccounts ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
 
             {showAccounts && (
-              <div className="mt-2 divide-y divide-line/60 max-h-56 overflow-y-auto space-y-1">
-                <p className="pb-1 text-[11px] text-body/80">Click any business below to auto-fill its login credentials:</p>
-                {SHOWCASE_ACCOUNTS.map((acc) => (
+              <div className="mt-2 divide-y divide-line/60 max-h-64 overflow-y-auto space-y-1">
+                <p className="pb-1 text-[11px] text-body/80">
+                  Click any business below to auto-fill its email (and showcase demo password):
+                </p>
+
+                {accountsLoading && (
+                  <div className="flex items-center justify-center py-3 text-body gap-2">
+                    <Loader2 size={14} className="animate-spin text-teal" />
+                    <span>Loading registered businesses…</span>
+                  </div>
+                )}
+
+                {accounts.map((acc) => (
                   <div
                     key={acc.email}
-                    onClick={() => fillAccount(acc.email)}
-                    className="pt-1.5 pb-1 flex justify-between items-center cursor-pointer hover:bg-canvas p-1 rounded transition-colors"
+                    onClick={() => selectAccount(acc)}
+                    className="pt-2 pb-1.5 flex justify-between items-center cursor-pointer hover:bg-canvas p-1.5 rounded transition-colors"
                   >
-                    <div>
-                      <p className="font-medium text-ink">{acc.name}</p>
-                      <p className="text-[11px] text-body">{acc.sector} · {acc.location}</p>
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-ink truncate">{acc.name}</p>
+                        {!acc.isDemo && (
+                          <span className="inline-flex items-center gap-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 px-1 py-0.2 text-[9px] font-semibold">
+                            <Sparkles size={9} /> New
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-body truncate">
+                        {acc.sector} · {acc.location}
+                      </p>
+                      <p className="text-[10px] font-mono text-body/70 truncate">{acc.email}</p>
                     </div>
-                    <span className="font-mono text-[10px] text-navy bg-navy/5 px-1.5 py-0.5 rounded">
+                    <span className="shrink-0 font-mono text-[10px] text-navy bg-navy/5 px-2 py-1 rounded hover:bg-navy/10">
                       Use this
                     </span>
                   </div>

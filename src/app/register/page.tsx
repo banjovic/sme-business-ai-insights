@@ -124,8 +124,8 @@ export default function RegisterPage() {
             </motion.p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Setting up…" : "Create account"}
+          <Button type="submit" size="lg" className="w-full" loading={loading}>
+            {loading ? "Setting up business…" : "Create account"}
           </Button>
         </form>
 

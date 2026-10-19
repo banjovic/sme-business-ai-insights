@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   AlertTriangle,
@@ -79,7 +79,7 @@ function formatShortDate(dateStr: string) {
 export default function DashboardPage() {
   const router = useRouter();
 
-  const { data: business } = useGetBusinessQuery();
+  const { data: business, isLoading: isBusinessLoading } = useGetBusinessQuery();
   const { data: insights, isLoading: isInsightsLoading } = useGetInsightsQuery();
   const { data: sales, isLoading: isSalesLoading } = useGetSalesQuery();
   const { data: stockItems, isLoading: isStockLoading } = useGetStockItemsQuery();
@@ -160,9 +160,11 @@ export default function DashboardPage() {
     return { total, todayTotal, count: expenses.length, topCategory };
   }, [expenses]);
 
+  const [loggingOut, setLoggingOut] = useState(false);
   const netCashFlow = salesMetrics.total - expenseMetrics.total;
 
   async function logout() {
+    setLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   }
@@ -173,9 +175,13 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <p className="font-display text-sm text-gold-dark">Good to see you</p>
-          <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">
-            {business?.name || "Your Business Today"}
-          </h1>
+          {isBusinessLoading ? (
+            <Skeleton className="h-8 w-48 mt-1 rounded-md" />
+          ) : (
+            <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">
+              {business?.name || "Your Business Today"}
+            </h1>
+          )}
         </div>
         <Dialog>
           <DialogTrigger asChild>
@@ -193,10 +199,10 @@ export default function DashboardPage() {
             </DialogHeader>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" disabled={loggingOut}>Cancel</Button>
               </DialogClose>
-              <Button variant="destructive" onClick={logout}>
-                Log out
+              <Button variant="destructive" onClick={logout} loading={loggingOut}>
+                {loggingOut ? "Logging out…" : "Log out"}
               </Button>
             </DialogFooter>
           </DialogContent>
