@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useSignIn, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,10 +25,10 @@ const SHOWCASE_ACCOUNTS = [
   { name: "Abeokuta Heritage Pottery", email: "segun@abeokutacrafts.ng", sector: "Crafts & Decor", location: "Abeokuta" },
 ];
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const { isLoaded, signIn, setActive } = useSignIn();
-  const { isSignedIn } = useAuth();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect_url") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,96 +36,35 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
 
-  // Automatically route to dashboard if already authenticated
-  useEffect(() => {
-    if (isSignedIn) {
-      router.replace("/dashboard");
-    }
-  }, [isSignedIn, router]);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleLogin(loginEmail: string, loginPass: string) {
     setError(null);
     setLoading(true);
 
     try {
-      // 1. First attempt instant ticket sign-in for showcase accounts (bypasses second-factor email OTP)
-      if (isLoaded && signIn) {
-        try {
-          const ticketRes = await fetch("/api/auth/demo-ticket", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-          });
-
-          if (ticketRes.ok) {
-            const { ticket } = await ticketRes.json();
-            if (ticket) {
-              const ticketResult = await signIn.create({
-                strategy: "ticket",
-                ticket,
-              });
-
-              if (ticketResult.status === "complete") {
-                await setActive({ session: ticketResult.createdSessionId });
-                router.push("/dashboard");
-                router.refresh();
-                return;
-              }
-            }
-          }
-        } catch {
-          // Fall through to regular sign-in
-        }
-      }
-
-      // 2. Regular Clerk sign in for registered users
-      if (isLoaded && signIn) {
-        try {
-          const result = await signIn.create({
-            identifier: email,
-            password: password,
-          });
-
-          if (result.status === "complete") {
-            await setActive({ session: result.createdSessionId });
-            router.push("/dashboard");
-            router.refresh();
-            return;
-          } else {
-            setError(`Sign in requires additional step: ${result.status}`);
-            return;
-          }
-        } catch (err: any) {
-          const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || "Incorrect email or password";
-          if (msg.toLowerCase().includes("already signed in")) {
-            router.push("/dashboard");
-            router.refresh();
-            return;
-          }
-          setError(msg);
-          return;
-        }
-      }
-
-      // 3. Fallback to local session
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: loginEmail, password: loginPass }),
       });
+
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Incorrect email or password");
         return;
       }
-      router.push("/dashboard");
+
+      router.push(redirectUrl);
       router.refresh();
     } catch {
-      setError("Something went wrong");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    handleLogin(email, password);
   }
 
   function fillAccount(accEmail: string) {
@@ -229,5 +167,13 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-canvas" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -245,8 +245,8 @@ async function main() {
 
   console.log("Seeding 12 showcase Nigerian SME businesses...");
 
-  // Also ensure demo@adaezestores.ng is an alias or mapped for legacy demo logins
-  const passwordHash = await bcrypt.hash("demo1234", 10);
+  // Default password for showcase accounts
+  const passwordHash = await bcrypt.hash("Showcase2026!", 10);
 
   // Check demo user
   const legacyDemo = await prisma.user.findUnique({ where: { email: "demo@adaezestores.ng" } });
