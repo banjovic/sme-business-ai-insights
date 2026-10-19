@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useSignUp, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const { isSignedIn } = useAuth();
 
   const [form, setForm] = useState({
     email: "",
@@ -24,13 +21,6 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Automatically route to dashboard if already authenticated
-  useEffect(() => {
-    if (isSignedIn) {
-      router.replace("/dashboard");
-    }
-  }, [isSignedIn, router]);
-
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -40,37 +30,6 @@ export default function RegisterPage() {
     setError(null);
     setLoading(true);
 
-    // 1. If Clerk is configured and loaded, use Clerk's Custom Flow
-    if (isLoaded && signUp) {
-      try {
-        const result = await signUp.create({
-          emailAddress: form.email,
-          password: form.password,
-          firstName: form.businessName,
-        });
-
-        if (result.status === "complete") {
-          await setActive({ session: result.createdSessionId });
-          router.push("/dashboard");
-          router.refresh();
-          return;
-        } else {
-          // If Clerk requests email code verification:
-          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-          router.push("/dashboard");
-          router.refresh();
-          return;
-        }
-      } catch (err: any) {
-        const msg = err.errors?.[0]?.longMessage || err.errors?.[0]?.message || "Failed to create account";
-        setError(msg);
-        return;
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    // 2. Fallback to local API
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -79,13 +38,12 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
+        setError(data.error ?? "Failed to set up account");
         return;
       }
-      router.push("/dashboard");
-      router.refresh();
+      window.location.href = "/dashboard";
     } catch {
-      setError("Something went wrong");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -166,8 +124,8 @@ export default function RegisterPage() {
             </motion.p>
           )}
 
-          <Button type="submit" size="lg" className="w-full" disabled={loading}>
-            {loading ? "Setting up…" : "Create account"}
+          <Button type="submit" size="lg" className="w-full" loading={loading}>
+            {loading ? "Setting up business…" : "Create account"}
           </Button>
         </form>
 

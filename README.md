@@ -21,8 +21,26 @@ spending flags — plus a conversational query interface.
   described in Chapter 3, Section 3.6.4 (see that file for how to swap in
   a real LLM API).
 - **Database:** PostgreSQL via Prisma (`prisma/schema.prisma` defines the schema).
-- **Auth:** a small hand-rolled signed-cookie session (`src/lib/auth.ts`),
-  standing in for the NextAuth.js/Auth.js approach specified in Chapter 4.
+- **Auth:** Lightweight signed-cookie JWT session (`jose` + `bcryptjs`), directly integrated with Prisma.
+
+---
+
+## Authentication Architecture & Future Roadmap
+
+### Current Implementation: Lightweight JWT Session (`jose` + `bcryptjs`)
+Authentication is built using an edge-compatible, signed-cookie session architecture:
+- **Zero Third-Party Latency:** Eliminates external network hops to managed identity services (e.g., Clerk), ensuring instant response times on Nigerian mobile networks.
+- **Atomic Registration:** When an SME owner registers, both the `User` record and their `Business` profile are committed in a single atomic database transaction.
+- **Edge-Ready Guarding:** Route middleware (`src/middleware.ts`) verifies session tokens using the Web Crypto API (`jose`), executing without heavy Node runtime overhead.
+- **Seamless SME Showcase Experience:** All 12 Nigerian SME showcase accounts can be accessed with 1-click credential auto-fill without OTP or multi-factor bottlenecks.
+
+### Future Recommendation: NextAuth.js (Auth.js)
+As documented in Chapter 4 (Sections 4.2 & 4.3), **NextAuth.js (Auth.js v5)** is the recommended production upgrade path when the platform expands into:
+1. **Enterprise Single Sign-On (SSO):** Connecting corporate SME chains or cooperative societies with Google Workspace, Microsoft 365, or SAML providers.
+2. **Federated Identity & OAuth 2.0:** Standardized authentication across multiple regional subdomains or mobile companion apps.
+3. **Session Token Rotation & Database Adapters:** Leveraging NextAuth's Prisma Adapter for centrally managed session revocation across distributed clusters.
+
+---
 
 ## Database setup
 
@@ -46,7 +64,7 @@ npm run db:seed     # optional demo account + 5 weeks of data
 npm run dev          # http://localhost:3000
 ```
 
-Demo login: **demo@adaezestores.ng** / **demo1234**
+Demo login: **demo@adaezestores.ng** / **Showcase2026!** (or **demo1234**)
 
 The seeded data is engineered so all three AI models have something to
 detect on first login: Cooking Oil is about to run out, Milk Cartons sales
@@ -83,7 +101,7 @@ prisma/
 
 | Area | Chapter 4 design | This build |
 |---|---|---|
-| Auth | NextAuth.js/Auth.js | Hand-rolled signed-cookie session |
+| Auth | NextAuth.js/Auth.js (Recommended) | Lightweight signed-cookie JWT session (`jose` + `bcryptjs`) |
 | Database | PostgreSQL via Prisma | PostgreSQL via Prisma |
 | AI/ML layer | Separate Python/FastAPI microservice | In-process TypeScript (same algorithms, no cross-service hop) |
 | Conversational layer | LLM API via function-calling | Rule-based intent classifier over the same fixed intent set |

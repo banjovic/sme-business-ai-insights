@@ -128,8 +128,13 @@ function SalesForm() {
         <Label htmlFor="date">Date</Label>
         <Input id="date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
-      <Button type="submit" className="w-full bg-navy text-white hover:bg-navy/90" disabled={isLoading || !itemId || !items?.length}>
-        {isLoading ? "Saving…" : "Save Sale"}
+      <Button
+        type="submit"
+        className="w-full bg-navy text-white hover:bg-navy/90"
+        loading={isLoading}
+        disabled={isLoading || !itemId || !items?.length}
+      >
+        {isLoading ? "Saving sale…" : "Save Sale"}
       </Button>
       {!items?.length && (
         <p className="text-xs text-body">
@@ -207,8 +212,12 @@ function StockForm() {
           placeholder="14500"
         />
       </div>
-      <Button type="submit" className="w-full bg-navy text-white hover:bg-navy/90" disabled={isLoading}>
-        {isLoading ? "Saving…" : "Add Stock Item"}
+      <Button
+        type="submit"
+        className="w-full bg-navy text-white hover:bg-navy/90"
+        loading={isLoading}
+      >
+        {isLoading ? "Saving item…" : "Add Stock Item"}
       </Button>
     </form>
   );
@@ -259,8 +268,12 @@ function ExpenseForm() {
         <Label htmlFor="expDate">Date</Label>
         <Input id="expDate" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
       </div>
-      <Button type="submit" className="w-full bg-navy text-white hover:bg-navy/90" disabled={isLoading}>
-        {isLoading ? "Saving…" : "Save Expense"}
+      <Button
+        type="submit"
+        className="w-full bg-navy text-white hover:bg-navy/90"
+        loading={isLoading}
+      >
+        {isLoading ? "Saving expense…" : "Save Expense"}
       </Button>
     </form>
   );
@@ -318,8 +331,12 @@ function RestockDialog({ item }: { item: StockItemDTO }) {
                 Cancel
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isLoading} className="bg-navy text-white hover:bg-navy/90">
-              {isLoading ? "Saving…" : "Confirm Restock"}
+            <Button
+              type="submit"
+              loading={isLoading}
+              className="bg-navy text-white hover:bg-navy/90"
+            >
+              {isLoading ? "Restocking…" : "Confirm Restock"}
             </Button>
           </DialogFooter>
         </form>

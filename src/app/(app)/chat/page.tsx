@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Send, Sparkles } from "lucide-react";
+import { Send, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useGetChatHistoryQuery, useAskQuestionMutation } from "@/store/api";
 import ReactMarkdown from "react-markdown";
@@ -56,8 +56,9 @@ export default function ChatPage() {
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
+                disabled={isLoading}
                 onClick={() => send(s)}
-                className="block w-full rounded-md border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-canvas"
+                className="block w-full rounded-md border border-line bg-surface px-3 py-2.5 text-left text-sm text-ink hover:bg-canvas disabled:opacity-50 transition-opacity"
               >
                 {s}
               </button>
@@ -144,7 +145,7 @@ export default function ChatPage() {
           aria-label="Send"
           className="flex h-11 w-11 items-center justify-center rounded-md bg-gold text-ink transition-opacity hover:bg-gold-dark disabled:opacity-50"
         >
-          <Send size={18} />
+          {isLoading ? <Loader2 size={18} className="animate-spin text-ink" /> : <Send size={18} />}
         </button>
       </form>
     </div>

@@ -1,66 +1,33 @@
 import { jwtVerify } from "jose";
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { type NextRequest, type NextFetchEvent, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
-// Routes where already-authenticated users should not linger (redirect to /dashboard)
-const isAuthRoute = createRouteMatcher([
-  "/login",
-  "/login/(.*)",
-  "/register",
-  "/register/(.*)",
-  "/sign-in",
-  "/sign-in/(.*)",
-  "/sign-up",
-  "/sign-up/(.*)",
-]);
+const AUTH_PAGES = ["/login", "/register"];
+const PROTECTED_PAGES = ["/dashboard", "/log", "/chat"];
+const PROTECTED_APIS = [
+  "/api/expenses",
+  "/api/insights",
+  "/api/sales",
+  "/api/stock",
+  "/api/chat",
+];
 
-// Protected routes that REQUIRE an active login session
-const isProtectedRoute = createRouteMatcher([
-  "/dashboard",
-  "/dashboard/(.*)",
-  "/log",
-  "/log/(.*)",
-  "/chat",
-  "/chat/(.*)",
-]);
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-const clerkHandler = clerkMiddleware((auth, req) => {
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+  // Check if current route is an auth page or protected route
+  const isAuthPage = AUTH_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const isProtectedPage = PROTECTED_PAGES.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const isProtectedApi = PROTECTED_APIS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+  // If the path is not something we guard, let it pass through immediately
+  if (!isAuthPage && !isProtectedPage && !isProtectedApi) {
     return NextResponse.next();
   }
 
-  const { userId } = auth();
-
-  // 1. If user is on an auth page (login/register):
-  if (isAuthRoute(req)) {
-    // If already logged in, send them to dashboard
-    if (userId) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-    // If not logged in, allow them to view login/register page!
-    return NextResponse.next();
-  }
-
-  // 2. If trying to access a protected business route without being logged in, redirect to login
-  if (!userId && isProtectedRoute(req)) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("redirect_url", req.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // 3. For any other route (including unmatched / 404 paths), let Next.js render not-found.tsx
-  return NextResponse.next();
-});
-
-export default async function middleware(req: NextRequest, event: NextFetchEvent) {
-  const isAuthPage =
-    req.nextUrl.pathname.startsWith("/login") ||
-    req.nextUrl.pathname.startsWith("/register") ||
-    req.nextUrl.pathname.startsWith("/sign-in") ||
-    req.nextUrl.pathname.startsWith("/sign-up");
-
-  // Check legacy cookie session
+  // Validate the lightweight JWT session cookie
   const token = req.cookies.get("sme_bi_session")?.value;
+  let isAuthenticated = false;
+
   if (token) {
     try {
       const secret = new TextEncoder().encode(
@@ -68,27 +35,32 @@ export default async function middleware(req: NextRequest, event: NextFetchEvent
       );
       const { payload } = await jwtVerify(token, secret);
       if (typeof payload.userId === "string") {
-        if (isAuthPage) {
-          return NextResponse.redirect(new URL("/dashboard", req.url));
-        }
-        return NextResponse.next();
+        isAuthenticated = true;
       }
     } catch {
-      // Invalid local session, proceed to Clerk check
+      // Invalid or expired token
+      isAuthenticated = false;
     }
   }
 
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    if (isAuthPage) {
-      return NextResponse.next();
-    }
-    if (isProtectedRoute(req)) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    return NextResponse.next();
+  // 1. If user is logged in and visits login or register -> redirect to dashboard
+  if (isAuthenticated && isAuthPage) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  return clerkHandler(req, event);
+  // 2. If user is unauthenticated and visits protected page -> redirect to login
+  if (!isAuthenticated && isProtectedPage) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("redirect_url", req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 3. If unauthenticated request hits protected API -> return 401 JSON
+  if (!isAuthenticated && isProtectedApi) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
