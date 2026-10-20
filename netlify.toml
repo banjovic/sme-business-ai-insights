@@ -7,4 +7,6 @@
 
 [build.environment]
   # Netlify Secrets Scanner flags any env var whose value appears in client bundles.
-  SECRETS_SCAN_OMIT_KEYS = "GEMINI_MODEL"
+  # Omit legacy Clerk variables and public configuration so scanner does not flag route strings:
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL,NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL,NEXT_PUBLIC_CLERK_SIGN_UP_URL,NEXT_PUBLIC_CLERK_SIGN_IN_URL,NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL,NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,GEMINI_MODEL"
+
