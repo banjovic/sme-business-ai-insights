@@ -7,7 +7,7 @@ import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ChevronUp, Store, Sparkles, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Store, Sparkles, Loader2, Eye, EyeOff } from "lucide-react";
 
 interface ShowcaseAccount {
   id?: string;
@@ -42,6 +42,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAccounts, setShowAccounts] = useState(false);
@@ -135,15 +136,26 @@ function LoginForm() {
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              ref={passwordRef}
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                ref={passwordRef}
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-body/60 hover:text-ink focus:outline-none focus-visible:text-ink transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -168,7 +180,7 @@ function LoginForm() {
             Email: <span className="tabular font-mono text-ink">demo@adaezestores.ng</span> · Password: <span className="tabular font-mono text-ink">Showcase2026!</span>
           </p>
 
-          <div className="mt-3 border-t border-line/60 pt-2">
+          {/* <div className="mt-3 border-t border-line/60 pt-2">
             <button
               type="button"
               onClick={() => setShowAccounts(!showAccounts)}
@@ -221,7 +233,7 @@ function LoginForm() {
                 ))}
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </div>

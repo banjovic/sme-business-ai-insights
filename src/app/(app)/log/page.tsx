@@ -43,6 +43,7 @@ import {
   type StockItemDTO,
 } from "@/store/api";
 import { formatNaira } from "@/lib/utils";
+import { MobileLogoutButton } from "@/components/logout-dialog";
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
@@ -668,8 +669,13 @@ function FullLogsSection() {
 export default function LogPage() {
   return (
     <div className="px-5 pb-12 pt-8 lg:px-8 lg:pt-10">
-      <p className="font-display text-sm text-gold-dark">Daily Operations</p>
-      <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">Record & Audit Activity</h1>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="font-display text-sm text-gold-dark">Daily Operations</p>
+          <h1 className="font-display text-2xl font-medium text-ink lg:text-3xl">Record & Audit Activity</h1>
+        </div>
+        <MobileLogoutButton />
+      </div>
 
       {/* Forms Section */}
       <Tabs defaultValue="sales" className="mt-6">

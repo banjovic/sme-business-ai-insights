@@ -1,29 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { LogOut, Building2, Loader2 } from "lucide-react";
+import { LogOut, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav-items";
 import { useGetBusinessQuery } from "@/store/api";
+import { LogoutDialog } from "@/components/logout-dialog";
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { data: business, isLoading: isBusinessLoading } = useGetBusinessQuery();
-  const [loggingOut, setLoggingOut] = useState(false);
-
-  async function handleLogout() {
-    setLoggingOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      // ignore
-    }
-    // Hard navigate to clear Redux in-memory cache and cookies cleanly
-    window.location.href = "/login";
-  }
 
   return (
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-line bg-surface px-4 py-6 lg:flex">
@@ -81,23 +69,15 @@ export function SidebarNav() {
           </div>
         )}
 
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-body hover:bg-canvas hover:text-ink disabled:opacity-50 transition-colors"
-        >
-          {loggingOut ? (
-            <>
-              <Loader2 size={18} className="animate-spin text-teal" />
-              <span>Logging out…</span>
-            </>
-          ) : (
-            <>
-              <LogOut size={18} strokeWidth={1.8} />
-              <span>Log out</span>
-            </>
-          )}
-        </button>
+        <LogoutDialog>
+          <button
+            type="button"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-body hover:bg-canvas hover:text-ink transition-colors"
+          >
+            <LogOut size={18} strokeWidth={1.8} />
+            <span>Log out</span>
+          </button>
+        </LogoutDialog>
       </div>
     </aside>
   );

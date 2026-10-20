@@ -10,7 +10,6 @@ import {
   Receipt,
   HelpCircle,
   MessagesSquare,
-  LogOut,
   ArrowRight,
   CheckCircle2,
   Sparkles,
@@ -30,16 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatNaira } from "@/lib/utils";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { MobileLogoutButton } from "@/components/logout-dialog";
 
 const SEVERITY_STYLES: Record<string, { border: string; iconBg: string; Icon: typeof AlertTriangle }> = {
   critical: { border: "border-l-alert-red", iconBg: "bg-alert-red", Icon: AlertTriangle },
@@ -160,14 +150,7 @@ export default function DashboardPage() {
     return { total, todayTotal, count: expenses.length, topCategory };
   }, [expenses]);
 
-  const [loggingOut, setLoggingOut] = useState(false);
   const netCashFlow = salesMetrics.total - expenseMetrics.total;
-
-  async function logout() {
-    setLoggingOut(true);
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
-  }
 
   return (
     <div className="px-5 pb-8 pt-8 lg:px-8 lg:pt-10">
@@ -183,30 +166,7 @@ export default function DashboardPage() {
             </h1>
           )}
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <button
-              aria-label="Log out"
-              className="mt-1 flex h-9 w-9 items-center justify-center rounded-full text-body hover:bg-canvas lg:hidden"
-            >
-              <LogOut size={18} />
-            </button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Log out?</DialogTitle>
-              <DialogDescription>You&apos;ll need to sign back in to see your business data.</DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline" disabled={loggingOut}>Cancel</Button>
-              </DialogClose>
-              <Button variant="destructive" onClick={logout} loading={loggingOut}>
-                {loggingOut ? "Logging out…" : "Log out"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <MobileLogoutButton />
       </div>
 
       {/* SECTION 1: At-a-glance Metric Cards */}
