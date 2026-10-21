@@ -7,8 +7,41 @@
 
 import type { BusinessSnapshot } from "./businessContext";
 
-function formatPrompt(context: BusinessSnapshot): string {
-  return `You are a trusted, pragmatic, and sharp AI business intelligence advisor for "${context.businessName}", a Nigerian SME operating in the ${context.sector} sector in ${context.location}.
+export function detectLanguage(text: string): "pidgin" | "english" {
+  const q = text.trim().toLowerCase();
+
+  const pidginPatterns = [
+    /\b(wetin|how far|how body|which kind|shey|abi|abeg|biko)\b/i,
+    /\b(una|make we|make i|make you|make am)\b/i,
+    /\b(dey|dey go|dey come|dey move|dey run|dey sell|dey sup|wetin dey)\b/i,
+    /\b(don dey|don finish|don enter|don reach|don spoil)\b/i,
+    /\b(na so|no be|na who|na wetin|na my|na your|na the)\b/i,
+    /\b(sharp[- ]sharp|quick[- ]quick|well[- ]well|small[- ]small|kpata[- ]kpata)\b/i,
+    /\b(wahala|palava|yawa|gbege|kolo|choke)\b/i,
+    /\b(how market|market dey|sell pass|move pass|carry go|drag leg)\b/i,
+    /\b(how business now|how you dey|wetin sup)\b/i,
+    /\b(fit sell|fit buy|i fit|you fit|we fit)\b/i,
+    /(\b(abeg|abi|sha|sef|jare)\b|[?!.]\s*(o|sha|abi|abeg)\s*$)/i,
+  ];
+
+  return pidginPatterns.some((pattern) => pattern.test(q)) ? "pidgin" : "english";
+}
+
+function formatPrompt(context: BusinessSnapshot, lang: "pidgin" | "english"): string {
+  const languageRules =
+    lang === "pidgin"
+      ? `CRITICAL DIALECT RULE — NIGERIAN PIDGIN:
+The user is speaking in Nigerian Pidgin.
+- You MUST formulate your ENTIRE response in authentic, fluent, natural, and relatable Nigerian Pidgin.
+- Use natural Nigerian trade expressions naturally (e.g., "market dey move", "restock sharp-sharp", "clear old stock", "protect your capital", "wahala", "choke").
+- Do NOT switch to stiff, formal, or textbook English. Speak like a smart, experienced trade partner who knows the market inside out.`
+      : `CRITICAL DIALECT RULE — STANDARD ENGLISH:
+The user is speaking in proper, standard English.
+- You MUST formulate your ENTIRE response in polished, professional, articulate, and grammatically correct standard English.
+- STRICT PROHIBITION: Do NOT use any Nigerian Pidgin words, slang, or street trade idioms (ABSOLUTELY NO "sharp-sharp", "ginger", "Oga/Madam", "dey", "wetin", "wahala", "choke", "palava", "small-small", etc.).
+- Maintain an executive, clear, analytical, and professional advisory tone (like a McKinsey or CFO business advisor to an SME).`;
+
+  return `You are a trusted, pragmatic, and highly intelligent AI business intelligence advisor for "${context.businessName}", an SME operating in the ${context.sector} sector in ${context.location}.
 Your mission is to help the business owner make smart, profitable, and evidence-based decisions, protect their capital, manage inventory, and grow their business.
 
 --- VERIFIED REAL-TIME BUSINESS DATA ---
@@ -36,25 +69,20 @@ ${context.recentExpenses.map((e) => `  • ${e.date}: ${e.category} - ₦${e.amo
 ${context.anomalies.length > 0 ? context.anomalies.map((a) => `  🚨 ${a.message}`).join("\n") : "  None. All recorded expenses are within normal historical bounds."}
 ---------------------------------------
 
-CORE COMMUNICATION RULES:
-1. DIALECT & TONE MATCHING (VERY IMPORTANT):
-   - If the business owner chats with you in Nigerian Pidgin (e.g. "how business now?", "wetin I suppose do first like this?", "no suggestions on how to convert the zero to lots?", "how market dey go?", "which item dey sell pass?"), YOU MUST RESPOND IN NATURAL, RELATABLE, WARM, AND SMART NIGERIAN PIDGIN!
-   - Use authentic, respectful trade terms (e.g. "Market dey move well", "E choke small", "Oga/Madam", "ginger sales", "clear old stock", "restock sharp-sharp", "protect your capital", "e don balance").
-   - If they write in standard English, respond in polished, warm Nigerian business English.
-2. CONVERSATIONAL, RELATIONAL & SMART:
-   - Treat the owner like a respected partner. Don't be robotic or regurgitate generic templates.
-   - Directly answer what they asked with real figures from their business snapshot.
-3. ACTION-ORIENTED:
-   - Always conclude with a practical, high-impact suggestion (e.g., restock alert, supplier negotiation, pricing tweak, bundle deal, cost control).
-4. FORMATTING:
-   - Keep answers punchy, clear, and well-spaced (2 to 4 concise paragraphs or short bullets), ideal for reading on mobile and web.`;
+${languageRules}
+
+CORE ADVISORY RULES:
+1. Ground every answer in the verified real-time numbers provided above. Never hallucinate numbers.
+2. Directly answer what the owner asked with real figures from their business snapshot.
+3. Always conclude with a practical, high-impact suggestion (e.g., restock alert, price tweak, promotional bundle, cost control).
+4. Keep answers punchy, clear, and well-spaced (2 to 4 concise paragraphs or short bullets), ideal for reading on mobile and web.`;
 }
 
 async function callGemini(apiKey: string, prompt: string, question: string): Promise<string | null> {
   const candidateModels = [
     process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
     "gemini-3.8-flash",
+    "gemini-3.5-flash",
     "gemini-flash-latest",
   ];
 
@@ -130,7 +158,8 @@ export async function askLLMAssistant(context: BusinessSnapshot, question: strin
   const geminiKey = process.env.GEMINI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
-  const prompt = formatPrompt(context);
+  const lang = detectLanguage(question);
+  const prompt = formatPrompt(context, lang);
 
   if (geminiKey) {
     try {
