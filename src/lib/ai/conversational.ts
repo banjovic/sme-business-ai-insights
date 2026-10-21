@@ -9,7 +9,7 @@
 //    semantic responder that answers item-specific, revenue, expense, and restock questions.
 
 import { getBusinessSnapshot, type BusinessSnapshot } from "./businessContext";
-import { askLLMAssistant } from "./llmAssistant";
+import { askLLMAssistant, detectLanguage } from "./llmAssistant";
 
 export type Intent =
   | "stockout_check"
@@ -27,8 +27,8 @@ export type Intent =
 function analyzeDeterministically(snapshot: BusinessSnapshot, question: string): { answer: string; intent: Intent } {
   const q = question.toLowerCase().trim();
 
-  // Helper to detect if question is likely in Pidgin
-  const isPidgin = /dey|wetin|sup|fit|make we|sharp-sharp|oga|abeg|choke|market|na so|kpa|kobo|palava|no be|wahala/i.test(q);
+  // Robust dialect detection matching input language style
+  const isPidgin = detectLanguage(question) === "pidgin";
 
   // 1. Greetings
   if (/^(hi|hello|hey|good (morning|afternoon|evening)|how far|kedu|bawo|sannu|wetin dey sup|how you dey)\b/i.test(q)) {
@@ -89,10 +89,10 @@ function analyzeDeterministically(snapshot: BusinessSnapshot, question: string):
     const warnings = snapshot.stockoutAlerts.filter((a) => a.riskLevel === "warning");
     const parts: string[] = [];
     if (critical.length > 0) {
-      parts.push(`Urgent: ${critical.map((c) => c.message).join(" ")}`);
+      parts.push(isPidgin ? `Danger zone: ${critical.map((c) => c.message).join(" ")}` : `Urgent: ${critical.map((c) => c.message).join(" ")}`);
     }
     if (warnings.length > 0) {
-      parts.push(`Reorder soon: ${warnings.map((w) => w.message).join(" ")}`);
+      parts.push(isPidgin ? `Reorder soon sharp-sharp: ${warnings.map((w) => w.message).join(" ")}` : `Reorder soon: ${warnings.map((w) => w.message).join(" ")}`);
     }
     return {
       answer: parts.join("\n\n"),
@@ -180,7 +180,9 @@ function analyzeDeterministically(snapshot: BusinessSnapshot, question: string):
       };
     }
     return {
-      answer: `Sales slowdown detected: ${snapshot.slowPeriods.map((s) => s.message).join(" ")} Consider running a weekend discount or bundling to move stock.`,
+      answer: isPidgin
+        ? `Sales don slow down for some goods: ${snapshot.slowPeriods.map((s) => s.message).join(" ")} Make you do weekend discount or bundle them make stock move sharp-sharp.`
+        : `Sales slowdown detected: ${snapshot.slowPeriods.map((s) => s.message).join(" ")} Consider running a weekend discount or bundling to move stock.`,
       intent: "slow_period_check",
     };
   }
@@ -191,11 +193,17 @@ function analyzeDeterministically(snapshot: BusinessSnapshot, question: string):
       .map(([cat, amt]) => `${cat}: ₦${amt.toLocaleString()}`)
       .join(", ");
     const anomalyMsg = snapshot.anomalies.length > 0
-      ? ` 🚨 Flagged anomaly: ${snapshot.anomalies.map((a) => a.message).join(" ")}`
-      : " All expenses appear within their normal statistical range.";
+      ? (isPidgin
+          ? ` 🚨 Alarm blow: ${snapshot.anomalies.map((a) => a.message).join(" ")}`
+          : ` 🚨 Flagged anomaly: ${snapshot.anomalies.map((a) => a.message).join(" ")}`)
+      : (isPidgin
+          ? " All expenses dey within normal range."
+          : " All expenses appear within their normal statistical range.");
 
     return {
-      answer: `Total recorded expenses are ₦${snapshot.totalExpenses.toLocaleString()} (${breakdown}).${anomalyMsg}`,
+      answer: isPidgin
+        ? `Total recorded expenses na ₦${snapshot.totalExpenses.toLocaleString()} (${breakdown}).${anomalyMsg}`
+        : `Total recorded expenses are ₦${snapshot.totalExpenses.toLocaleString()} (${breakdown}).${anomalyMsg}`,
       intent: snapshot.anomalies.length > 0 ? "anomaly_check" : "expense_inquiry",
     };
   }
