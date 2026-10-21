@@ -28,10 +28,29 @@ function analyzeDeterministically(snapshot: BusinessSnapshot, question: string):
   const q = question.toLowerCase().trim();
 
   // Robust dialect detection matching input language style
-  const isPidgin = detectLanguage(question) === "pidgin";
+  const lang = detectLanguage(question);
+  const isPidgin = lang === "pidgin";
 
   // 1. Greetings
-  if (/^(hi|hello|hey|good (morning|afternoon|evening)|how far|kedu|bawo|sannu|wetin dey sup|how you dey)\b/i.test(q)) {
+  if (/^(hi|hello|hey|good (morning|afternoon|evening)|how far|kedu|bawo|sannu|wetin dey sup|how you dey|ndewo|barka)\b/i.test(q)) {
+    if (lang === "yoruba") {
+      return {
+        answer: `Ẹ ku ọjọ o! Mo wa nibi lati ran ọ lọwọ pẹlu gbogbo ọrọ iṣowo ${snapshot.businessName}. O le beere nipa ọja rẹ, owo ti o wọle, tabi eyiti o yẹ ki o ra si i.`,
+        intent: "greeting",
+      };
+    }
+    if (lang === "igbo") {
+      return {
+        answer: `Ndewo nwanne m! Anọ m ebe a iji nyere gị aka na azụmahịa ${snapshot.businessName}. Ị nwere ike ịjụ m gbasara ngwa ahịa gị, ego banyere n'izu a, ma ọ bụ nke ị ga-azụta ngwa ngwa.`,
+        intent: "greeting",
+      };
+    }
+    if (lang === "hausa") {
+      return {
+        answer: `Sannu da aiki! Ina nan don taimaka maka kasuwancin ${snapshot.businessName}. Za ka iya tambaya game da kaya, kudaden shiga, ko abin da ya kamata a sake siyo.`,
+        intent: "greeting",
+      };
+    }
     return {
       answer: isPidgin
         ? `How far my partner! I dey here to help you monitor everything for ${snapshot.businessName}. You fit ask me about your stock, weekly sales, expenses wey choke, or wetin you suppose restock sharp-sharp.`
